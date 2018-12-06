@@ -7,29 +7,33 @@ from ortools.constraint_solver import routing_enums_pb2
 from flask import Flask, jsonify, request
 import pymongo
 import config
+from bson.objectid import ObjectId
+from geopy.distance import geodesic
 
 ###########################
 # Problem Data Definition #
 ###########################
-def create_data_model():
+def create_data_model(locations, num_vehicles):
 	"""Stores the data for the problem"""
 	data = {}
 	# Locations in block units
-	_locations = \
-			[(4, 4), # depot
-			(2, 0), (8, 0), # locations to visit
-			(0, 1), (1, 1),
-			(5, 2), (7, 2),
-			(3, 3), (6, 3),
-			(5, 5), (8, 5),
-			(1, 6), (2, 6),
-			(3, 7), (6, 7),
-			(0, 8), (7, 8)]
+	_locations = locations
+			# \
+			# [(4, 4), # depot
+			# (2, 0), (8, 0), # locations to visit
+			# (0, 1), (1, 1),
+			# (5, 2), (7, 2),
+			# (3, 3), (6, 3),
+			# (5, 5), (8, 5),
+			# (1, 6), (2, 6),
+			# (3, 7), (6, 7),
+			# (0, 8), (7, 8)]
 	# Multiply coordinates in block units by the dimensions of an average city block, 114m x 80m,
 	# to get location coordinates.
-	data["locations"] = [(l[0] * 114, l[1] * 80) for l in _locations]
+	data["locations"] = _locations
+	# [(l[0] * 114, l[1] * 80) for l in _locations]
 	data["num_locations"] = len(data["locations"])
-	data["num_vehicles"] = 4
+	data["num_vehicles"] = num_vehicles
 	data["depot"] = 0
 	return data
 #######################
@@ -38,7 +42,7 @@ def create_data_model():
 def manhattan_distance(position_1, position_2):
 	"""Computes the Manhattan distance between two points"""
 	return (
-		abs(position_1[0] - position_2[0]) + abs(position_1[1] - position_2[1]))
+		geodesic(position_1, position_2).miles)
 def create_distance_callback(data):
 	"""Creates callback to return distance between points."""
 	_distances = {}
@@ -61,7 +65,7 @@ def create_distance_callback(data):
 def add_distance_dimension(routing, distance_callback):
 	"""Add Global Span constraint"""
 	distance = 'Distance'
-	maximum_distance = 3000  # Maximum distance per vehicle.
+	maximum_distance = 300000  # Maximum distance per vehicle.
 	routing.AddDimension(
 		distance_callback,
 		0,  # null slack
@@ -87,17 +91,17 @@ def print_solution(data, routing, assignment):
 			index = assignment.Value(routing.NextVar(index))
 			distance += routing.GetArcCostForVehicle(previous_index, index, vehicle_id)
 		plan_output += ' {}\n'.format(routing.IndexToNode(index))
-		plan_output += 'Distance of route: {}m\n'.format(distance)
+		plan_output += 'Distance of route: {}mi\n'.format(distance)
 		print(plan_output)
 		total_distance += distance
-	print('Total distance of all routes: {}m'.format(total_distance))
+	print('Total distance of all routes: {}mi'.format(total_distance))
 ########
 # Main #
 ########
-def main():
+def main(locations, num_vehicles):
 	"""Entry point of the program"""
 	# Instantiate the data problem.
-	data = create_data_model()
+	data = create_data_model(locations, num_vehicles)
 	# Create Routing Model
 	routing = pywrapcp.RoutingModel(
 		data["num_locations"],
@@ -115,6 +119,7 @@ def main():
 	assignment = routing.SolveWithParameters(search_parameters)
 	if assignment:
 		print_solution(data, routing, assignment)
+	return assignment
 
 
 app = Flask(__name__)
@@ -126,12 +131,13 @@ db = client['users']
 def add_assignments():
 	campaign_id = request.get_json().get('params', '')['campaignId']
 	print(campaign_id)
+	campaign_collection = db.campaigns
+	campaign = campaign_collection.find_one({"_id": ObjectId(campaign_id)})
+	locations = [loc[:2] for loc in campaign['locations']]
+	num_vehicles = len(campaign['canvassers'])
+	assignment = main(locations, num_vehicles)
+	print(assignment)
 	return campaign_id
-	#campaign_collection = db.campaigns
-	#campaign = campaign_collection.find_one({"_id": campaign_id})
-	#print('yeet')
-	#print(campaign)
-	#return campaign_id
 
 
 @app.route('/editAssignments', methods=['POST'])
