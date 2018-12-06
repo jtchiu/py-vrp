@@ -124,10 +124,9 @@ db = client['users']
 
 @app.route('/addAssignments', methods=['POST'])
 def add_assignments():
-	campaign_id = request.args.params.campaignId
+	campaign_id = request.get_json().get('params', '')['campaignId']
 	campaign_collection = db.campaigns
 	campaign = campaign_collection.find_one({"_id": campaign_id})
-	print('yeet')
 	print(campaign)
 	return campaign_id
 
