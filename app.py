@@ -161,11 +161,14 @@ def add_assignments():
 				'lat': lat,
 				'lng': lng,
 				'locName': addr,
+				'rating': 5,
+				'answers': [],
+				'notes': 'No Notes',
 				'assignmentID': 'foo'
 			}
 			tasks.append(task)
 		assignment = {
-			'name': campaign_id,
+			'name': campaign['name'],
 			'campaignId': campaign_id,
 			'canvasser': campaign['canvassers'][i],
 			'dates': campaign['dates'],
