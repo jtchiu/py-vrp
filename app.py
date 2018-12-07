@@ -157,7 +157,7 @@ def add_assignments():
 	geolocator = Nominatim(user_agent='super_canvasser')
 	campaign_dates = campaign['dates']
 	dates = []
-	for d in dates:
+	for d in campaign_dates:
 		if d[6] is '0':
 			new_date = d[:6] + d[7:]
 			dates.append(new_date)
