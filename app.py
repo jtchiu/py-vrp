@@ -254,8 +254,16 @@ def edit_assignments():
 		assignments_col.replace_one({'campaignId': campaign_id}, assignment)
 		i += 1
 
+	for canvasser in campaign['canvassers']:
+		canvasser_collection = db.canvassers
+		user = canvasser_collection.find_one({'_id': canvasser})
+		dates = []
+		for date in user['availableDates']:
+			if date < campaign['dates'][0] or date > campaign['dates'][1] :
+				dates.append(date)
+		canvasser_collection.replace_one({'_id': canvasser}, {'availableDates': dates})
+		
 	return campaign_id
-
 
 if __name__ == '__main__':
 	# main()
