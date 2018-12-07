@@ -81,20 +81,25 @@ def add_distance_dimension(routing, distance_callback):
 def print_solution(data, routing, assignment):
 	"""Print routes on console."""
 	total_distance = 0
+	result = []
 	for vehicle_id in range(data["num_vehicles"]):
 		index = routing.Start(vehicle_id)
 		plan_output = 'Route for vehicle {}:\n'.format(vehicle_id)
 		distance = 0
+		indices = []
 		while not routing.IsEnd(index):
+			indices.append(routing.IndexToNode(index))
 			plan_output += ' {} ->'.format(routing.IndexToNode(index))
 			previous_index = index
 			index = assignment.Value(routing.NextVar(index))
 			distance += routing.GetArcCostForVehicle(previous_index, index, vehicle_id)
+		result.append(indices)
 		plan_output += ' {}\n'.format(routing.IndexToNode(index))
 		plan_output += 'Distance of route: {}mi\n'.format(distance)
 		print(plan_output)
 		total_distance += distance
 	print('Total distance of all routes: {}mi'.format(total_distance))
+	return result
 ########
 # Main #
 ########
@@ -117,9 +122,10 @@ def main(locations, num_vehicles):
 		routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC) # pylint: disable=no-member
 	# Solve the problem.
 	assignment = routing.SolveWithParameters(search_parameters)
+	result = None
 	if assignment:
-		print_solution(data, routing, assignment)
-	return assignment
+		result = print_solution(data, routing, assignment)
+	return result
 
 
 app = Flask(__name__)
@@ -135,8 +141,8 @@ def add_assignments():
 	campaign = campaign_collection.find_one({"_id": ObjectId(campaign_id)})
 	locations = [loc[:2] for loc in campaign['locations']]
 	num_vehicles = len(campaign['canvassers'])
-	assignment = main(locations, num_vehicles)
-	print(assignment)
+	result = main(locations, num_vehicles)
+	print(result)
 	return campaign_id
 
 
