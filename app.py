@@ -142,7 +142,15 @@ def add_assignments():
 	locations = [loc[:2] for loc in campaign['locations']]
 	num_vehicles = len(campaign['canvassers'])
 	result = main(locations, num_vehicles)
+	locations = [loc[-1] for loc in campaign['locations']]
+	addresses = []
+	for canvasser in result:
+		addr = []
+		for i in canvasser:
+			addr.append(locations[i])
+		addresses.append(addr)
 	print(result)
+	print(addresses)
 	return campaign_id
 
 
