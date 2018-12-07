@@ -9,6 +9,7 @@ import pymongo
 import config
 from bson.objectid import ObjectId
 from geopy.distance import geodesic
+from geopy.geocoders import Nominatim
 
 ###########################
 # Problem Data Definition #
@@ -153,6 +154,16 @@ def add_assignments():
 	print(addresses)
 	assignments_col = db['assignments']
 	i = 0
+	geolocator = Nominatim(user_agent='super_canvasser')
+	campaign_dates = campaign['dates']
+	dates = []
+	for d in dates:
+		if d[6] is '0':
+			new_date = d[:6] + d[7:]
+			dates.append(new_date)
+		else:
+			dates.append(d)
+			
 	for canvassers in addresses:
 		tasks = []
 		for lat, lng, addr in canvassers:
@@ -160,7 +171,7 @@ def add_assignments():
 				'complete': False,
 				'lat': lat,
 				'lng': lng,
-				'locName': addr,
+				'locName': geolocator.reverse(str(lat) + ', ' + str(lng)).address,
 				'rating': 5,
 				'answers': [],
 				'notes': 'No Notes',
@@ -171,7 +182,7 @@ def add_assignments():
 			'name': campaign['name'],
 			'campaignId': campaign_id,
 			'canvasser': campaign['canvassers'][i],
-			'dates': campaign['dates'],
+			'dates': dates,
 			'tasks': tasks
 		}
 		assignments_col.insert_one(assignment)
