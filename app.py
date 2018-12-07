@@ -188,6 +188,15 @@ def add_assignments():
 		assignments_col.insert_one(assignment)
 		i += 1
 
+	for canvasser in campaign['canvassers']:
+		canvasser_collection = db.canvassers
+		user = canvasser_collection.find_one({"_id": ObjectId(canvasser)})
+		dates = []
+		for date in user.availableDates:
+			if date not in campaign['dates']:
+				dates.append(date)
+		canvasser_collection.find_one_and_update({'_id': ObjectId(canvasser)}, {'availableDates': dates})
+		
 	return campaign_id
 
 
@@ -211,6 +220,16 @@ def edit_assignments():
 	print(addresses)
 	assignments_col = db['assignments']
 	i = 0
+	geolocator = Nominatim(user_agent='super_canvasser')
+	campaign_dates = campaign['dates']
+	dates = []
+	for d in campaign_dates:
+		if d[6] is '0':
+			new_date = d[:6] + d[7:]
+			dates.append(new_date)
+		else:
+			dates.append(d)
+			
 	for canvassers in addresses:
 		tasks = []
 		for lat, lng, addr in canvassers:
@@ -218,7 +237,7 @@ def edit_assignments():
 				'complete': False,
 				'lat': lat,
 				'lng': lng,
-				'locName': addr,
+				'locName': geolocator.reverse(str(lat) + ', ' + str(lng)).address,
 				'rating': 5,
 				'answers': [],
 				'notes': 'No Notes',
@@ -229,10 +248,10 @@ def edit_assignments():
 			'name': campaign['name'],
 			'campaignId': campaign_id,
 			'canvasser': campaign['canvassers'][i],
-			'dates': campaign['dates'],
+			'dates': dates,
 			'tasks': tasks
 		}
-		assignments_col.insert_one(assignment)
+		assignments_col.find_one_and_update({'campaignId': campaign_id}, assignment)
 		i += 1
 
 	return campaign_id
