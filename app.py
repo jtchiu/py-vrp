@@ -190,12 +190,12 @@ def add_assignments():
 
 	for canvasser in campaign['canvassers']:
 		canvasser_collection = db.canvassers
-		user = canvasser_collection.find_one({"_id": ObjectId(canvasser)})
+		user = canvasser_collection.find_one({'_id': canvasser})
 		dates = []
-		for date in user.availableDates:
-			if date not in campaign['dates']:
+		for date in user['availableDates']:
+			if date < campaign['dates'][0] or date > campaign['dates'][1] :
 				dates.append(date)
-		canvasser_collection.find_one_and_update({'_id': ObjectId(canvasser)}, {'availableDates': dates})
+		canvasser_collection.replace_one({'_id': canvasser}, {'availableDates': dates})
 		
 	return campaign_id
 
@@ -251,7 +251,7 @@ def edit_assignments():
 			'dates': dates,
 			'tasks': tasks
 		}
-		assignments_col.find_one_and_update({'campaignId': campaign_id}, assignment)
+		assignments_col.replace_one({'campaignId': campaign_id}, assignment)
 		i += 1
 
 	return campaign_id
