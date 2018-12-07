@@ -142,7 +142,7 @@ def add_assignments():
 	locations = [loc[:2] for loc in campaign['locations']]
 	num_vehicles = len(campaign['canvassers'])
 	result = main(locations, num_vehicles)
-	locations = [loc[-1] for loc in campaign['locations']]
+	locations = campaign['locations']
 	addresses = []
 	for canvasser in result:
 		addr = []
@@ -151,6 +151,32 @@ def add_assignments():
 		addresses.append(addr)
 	print(result)
 	print(addresses)
+	assignments_col = db['assignments']
+	i = 0
+	for canvassers in addresses:
+		tasks = []
+		for lat, lng, addr in canvassers:
+			task = {
+				'complete': False,
+				'lat': lat,
+				'lng': lng,
+				'locName': addr,
+				'rating': 5,
+				'answers': [],
+				'notes': '',
+				'assignmentID': 'foo'
+			}
+			tasks.append(task)
+		assignment = {
+			'name': campaign_id,
+			'campaignId': campaign_id,
+			'canvasser': campaign['canvassers'][i],
+			'dates': campaign['dates'],
+			'tasks': tasks
+		}
+		assignments_col.insert_one(assignment)
+		i += 1
+
 	return campaign_id
 
 
