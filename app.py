@@ -9,6 +9,7 @@ import pymongo
 import config
 from bson.objectid import ObjectId
 from geopy.distance import geodesic
+from geopy.geocoders import Nominatim
 
 ###########################
 # Problem Data Definition #
@@ -153,6 +154,16 @@ def add_assignments():
 	print(addresses)
 	assignments_col = db['assignments']
 	i = 0
+	geolocator = Nominatim(user_agent='super_canvasser')
+	campaign_dates = campaign['dates']
+	dates = []
+	for d in dates:
+		if d[6] is '0':
+			new_date = d[:6] + d[7:]
+			dates.append(new_date)
+		else:
+			dates.append(d)
+			
 	for canvassers in addresses:
 		tasks = []
 		for lat, lng, addr in canvassers:
@@ -160,15 +171,18 @@ def add_assignments():
 				'complete': False,
 				'lat': lat,
 				'lng': lng,
-				'locName': addr,
+				'locName': geolocator.reverse(lat + ', ' + lng).address,
+				'rating': 5,
+				'answers': [],
+				'notes': 'No Notes',
 				'assignmentID': 'foo'
 			}
 			tasks.append(task)
 		assignment = {
-			'name': campaign_id,
+			'name': campaign['name'],
 			'campaignId': campaign_id,
 			'canvasser': campaign['canvassers'][i],
-			'dates': campaign['dates'],
+			'dates': dates,
 			'tasks': tasks
 		}
 		assignments_col.insert_one(assignment)
@@ -179,8 +193,48 @@ def add_assignments():
 
 @app.route('/editAssignments', methods=['POST'])
 def edit_assignments():
-	campaign_id = request.args.params.campaignId
+	campaign_id = request.get_json().get('params', '')['campaignId']
 	print(campaign_id)
+	campaign_collection = db.campaigns
+	campaign = campaign_collection.find_one({"_id": ObjectId(campaign_id)})
+	locations = [loc[:2] for loc in campaign['locations']]
+	num_vehicles = len(campaign['canvassers'])
+	result = main(locations, num_vehicles)
+	locations = campaign['locations']
+	addresses = []
+	for canvasser in result:
+		addr = []
+		for i in canvasser:
+			addr.append(locations[i])
+		addresses.append(addr)
+	print(result)
+	print(addresses)
+	assignments_col = db['assignments']
+	i = 0
+	for canvassers in addresses:
+		tasks = []
+		for lat, lng, addr in canvassers:
+			task = {
+				'complete': False,
+				'lat': lat,
+				'lng': lng,
+				'locName': addr,
+				'rating': 5,
+				'answers': [],
+				'notes': 'No Notes',
+				'assignmentID': 'foo'
+			}
+			tasks.append(task)
+		assignment = {
+			'name': campaign['name'],
+			'campaignId': campaign_id,
+			'canvasser': campaign['canvassers'][i],
+			'dates': campaign['dates'],
+			'tasks': tasks
+		}
+		assignments_col.insert_one(assignment)
+		i += 1
+
 	return campaign_id
 
 
